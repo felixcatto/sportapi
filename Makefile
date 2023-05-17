@@ -2,6 +2,7 @@ install:
 	npm i
 
 start:
+	npx graphql-codegen
 	npx vite
 
 start-production:

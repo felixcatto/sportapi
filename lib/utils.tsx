@@ -1,20 +1,13 @@
-import { format, parseISO } from 'date-fns';
-import { isEmpty, isFunction } from 'lodash-es';
+import { format, formatDuration, parseISO } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import request, { Variables } from 'graphql-request';
+import { isEmpty } from 'lodash-es';
 import { compile } from 'path-to-regexp';
-import React from 'react';
-import Context from './context.js';
-import {
-    IContext,
-    IMakeEnum,
-    IMakeUrlFor,
-    IUseMergeState
-} from './types.js';
-
-export { Context };
+import useSWR from 'swr';
+import { IMakeEnum, IMakeUrlFor } from './types.js';
 
 export const makeEnum: IMakeEnum = (...args) =>
   args.reduce((acc, key) => ({ ...acc, [key]: key }), {} as any);
-
 
 export const qs = {
   stringify: (obj: object = {}) => {
@@ -40,61 +33,21 @@ export const makeUrlFor: IMakeUrlFor = rawRoutes => {
 
 export const routes = {
   home: '/',
-  events: '/events',
-};
-
-export const sportUrl = 'https://beta.sosportom.ru/graphql';
-export const apiRoutes = {
-  searchRepos: '/search/repositories',
-  repo: '/repos/:owner/:repo',
-  repoLanguages: '/repos/:owner/:repo/languages',
 };
 
 export const getUrl = makeUrlFor(routes);
 
-const getApiUrlBase = makeUrlFor(apiRoutes);
+export const sportUrl = 'https://beta.sosportom.ru/graphql';
 
-export const getApiUrl = (name: keyof typeof apiRoutes, routeParams?, query?) =>
-  `${sportUrl}${getApiUrlBase(name, routeParams, query)}`;
+export const fmtISO = (isoDate, formatStr) => format(parseISO(isoDate), formatStr, { locale: ru });
+export const fmt = (date, formatStr) => format(date, formatStr, { locale: ru });
+export const fmtDuration = (duration, format?) =>
+  formatDuration(duration, { locale: ru, zero: true, format });
 
-export const useContext = () => React.useContext<IContext>(Context);
+export const gqlRequest = <TVariables extends Variables = any>(query, variables?: TVariables) =>
+  request(sportUrl, query, variables);
 
-export const useMergeState: IUseMergeState = initialState => {
-  const [state, setState] = React.useState(initialState);
+const fetcher: any = ({ query, variables }) => request(sportUrl, query, variables);
 
-  const setImmerState = React.useCallback(fnOrObject => {
-    if (isFunction(fnOrObject)) {
-      const fn = fnOrObject;
-      setState(curState => {
-        const newState = fn(curState);
-        return { ...curState, ...newState };
-      });
-    } else {
-      const newState = fnOrObject;
-      setState(curState => ({ ...curState, ...newState }));
-    }
-  }, []);
-
-  return [state, setImmerState];
-};
-
-export const fmtISO = (isoDate, formatStr) => format(parseISO(isoDate), formatStr);
-
-export const formatNumber = (num, digits) => {
-  const lookup = [
-    { value: 1, symbol: '' },
-    { value: 1e3, symbol: 'k' },
-    { value: 1e6, symbol: 'M' },
-  ];
-
-  const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
-
-  const item = lookup
-    .slice()
-    .reverse()
-    .find(item => num >= item.value);
-
-  return item ? (num / item.value).toFixed(digits).replace(rx, '$1') + item.symbol : '0';
-};
-
-export const roundNumber = (num, digits) => Number(num.toFixed(digits));
+export const useGql = <TResponse = any, TVariables = any>(query, variables?: TVariables) =>
+  useSWR<TResponse>({ query, variables }, fetcher);

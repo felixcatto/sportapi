@@ -1,59 +1,89 @@
-import { isEmpty, orderBy } from 'lodash-es';
-import useSWR from 'swr';
-import { IRepository, IRepositoryFull } from '../../lib/types.ts';
-import { fmtISO, formatNumber, getApiUrl, roundNumber, sortOrders } from '../../lib/utils.tsx';
+import { Progress } from 'antd';
+import { format, intervalToDuration, parseISO } from 'date-fns';
+import { VideostandEvent } from '../../lib/gqlTypes/graphql.ts';
+import s from './styles.module.css';
 
-export const useRepositories = searchQuery => {
-  const { data: rawData, isLoading } = useSWR(
-    searchQuery && getApiUrl('searchRepos', {}, { q: searchQuery, per_page: 40 })
+type IInfoCircleProps = {
+  color: string;
+  entityMaxValue: number;
+  entityValue: number;
+  textFooter: string;
+  textHeader?: string | null;
+};
+
+type IGetEventTimeBeforeStart = (
+  nowDate: Date,
+  currentEvent?: VideostandEvent | null
+) =>
+  | (Required<Duration> & {
+      extraDays: number | null;
+      isMoreThanTwoWeeksToNextEvent: boolean;
+    })
+  | undefined;
+
+export const InfoCircle = (props: IInfoCircleProps) => {
+  const { color, entityMaxValue, entityValue, textFooter, textHeader } = props;
+  return (
+    <Progress
+      className={s.infoCircle}
+      type="circle"
+      size={160}
+      percent={((entityMaxValue - entityValue) / entityMaxValue) * 100}
+      strokeLinecap="square"
+      strokeColor="#1E3465"
+      trailColor={color}
+      strokeWidth={9}
+      format={() => (
+        <div className="text-white">
+          <div className="text-2.5">{textHeader || entityValue}</div>
+          <div className="text-base/4">{textFooter}</div>
+        </div>
+      )}
+    />
   );
-
-  const data = transformRepos(rawData);
-  return { data, isLoading };
 };
 
-export const useRepository = (owner, repo) => {
-  const { data: rawData, isLoading: isLoadingRepo } = useSWR(getApiUrl('repo', { owner, repo }));
-  const { data: languages, isLoading: isLoadingLaguages } = useSWR(
-    getApiUrl('repoLanguages', { owner, repo })
-  );
+export const getFormattedEventDate = (event: VideostandEvent) => {
+  const startDate = parseISO(event.dt_start);
+  const endDate = parseISO(event.dt_end);
 
-  const isLoading = isLoadingRepo || isLoadingLaguages;
-  const data = rawData ? transformRepo(rawData) : null;
-  if (!data || !languages) return { data: null, isLoading };
+  const isSingleDayEvent = format(startDate, 'yyyy MM dd') === format(endDate, 'yyyy MM dd');
+  if (isSingleDayEvent) return format(startDate, 'dd.MM.yyyy');
 
-  const fullData: IRepositoryFull = { ...data, languages: getLanguagesPercents(languages) };
-  return { data: fullData, isLoading };
+  const isSpreadInMonthEvent = format(startDate, 'yyyy MM') === format(endDate, 'yyyy MM');
+  if (isSpreadInMonthEvent)
+    return `${format(startDate, 'dd')}-${format(endDate, 'dd')}.${format(startDate, 'MM.yyyy')}`;
+
+  const isSpreadInMonthsEvent = format(startDate, 'yyyy') === format(endDate, 'yyyy');
+  if (isSpreadInMonthsEvent)
+    return `${format(startDate, 'dd.MM')}-${format(endDate, 'dd.MM')}.${format(startDate, 'yyyy')}`;
+
+  return `${format(startDate, 'dd.MM.yyyy')}-${format(endDate, 'dd.MM.yyyy')}`;
 };
 
-const transformRepos = (data): IRepository[] => {
-  if (isEmpty(data)) return [];
+export const getEventTimeBeforeStart: IGetEventTimeBeforeStart = (nowDate, currentEvent): any => {
+  if (!currentEvent) return;
+  const interval = intervalToDuration({
+    start: nowDate,
+    end: parseISO(currentEvent.dt_start),
+  });
+  const days = interval.days!;
+  const months = interval.months!;
 
-  const tmpData = data.items.map(transformRepo);
-  return orderBy(tmpData, 'stargazers_count', sortOrders.desc);
-};
+  let newDays = days;
+  let extraDays: number | null = null;
+  if (months > 0) {
+    newDays = 7;
+    extraDays = 7;
+  } else if (days > 7) {
+    newDays = Math.min(days - 7, 7);
+    extraDays = 7;
+  }
 
-const transformRepo = (repo): IRepository => ({
-  id: repo.id,
-  name: repo.name,
-  full_name: repo.full_name,
-  stargazers_count: repo.stargazers_count,
-  stars: formatNumber(repo.stargazers_count, 1),
-  pushed_at: repo.pushed_at,
-  lastCommitDate: fmtISO(repo.pushed_at, 'dd MMM yyyy'),
-  html_url: repo.html_url,
-  description: repo.description,
-  ownerName: repo.owner.login,
-  ownerLink: repo.owner.html_url,
-  ownerAvatar: repo.owner.avatar_url,
-});
-
-const getLanguagesPercents = languages => {
-  const totalLines = Object.keys(languages).reduce((acc, key) => acc + languages[key], 0);
-  return Object.keys(languages)
-    .map(language => ({
-      name: language,
-      usagePercent: roundNumber((languages[language] / totalLines) * 100, 1),
-    }))
-    .filter(el => el.usagePercent !== 0);
+  return {
+    ...interval,
+    days: newDays,
+    extraDays,
+    isMoreThanTwoWeeksToNextEvent: months > 0 || days > 14,
+  };
 };
