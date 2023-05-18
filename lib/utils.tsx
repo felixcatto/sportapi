@@ -4,10 +4,7 @@ import request, { Variables } from 'graphql-request';
 import { isEmpty } from 'lodash-es';
 import { compile } from 'path-to-regexp';
 import useSWR from 'swr';
-import { IMakeEnum, IMakeUrlFor } from './types.js';
-
-export const makeEnum: IMakeEnum = (...args) =>
-  args.reduce((acc, key) => ({ ...acc, [key]: key }), {} as any);
+import { IMakeUrlFor } from './types.js';
 
 export const qs = {
   stringify: (obj: object = {}) => {

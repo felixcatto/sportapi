@@ -60,53 +60,54 @@ export const Events = () => {
       <div className={s.content}>
         <div className="text-sm text-slate-400 mb-3">{getFormattedEventDate(currentEvent)}</div>
         <div className={s.currentEventName}>{currentEvent.title}</div>
-        {isEventActiveNow ? (
+
+        {isEventActiveNow && (
           <div className={s.activeEventTitle}>
             <div className="text-1.5">идет сейчас</div>
             <i className="far fa-clock text-white text-2 ml-5"></i>
           </div>
-        ) : (
-          eventTimeBeforeStart && (
-            <div className="h-40 flex justify-center gap-9">
-              {eventTimeBeforeStart.extraDays && (
-                <InfoCircle
-                  color={dayColor}
-                  entityMaxValue={7}
-                  entityValue={eventTimeBeforeStart.extraDays}
-                  textHeader={
-                    eventTimeBeforeStart.isMoreThanTwoWeeksToNextEvent
-                      ? `${eventTimeBeforeStart.extraDays}+`
-                      : null
-                  }
-                  textFooter={fmtDuration(['days'])}
-                />
-              )}
+        )}
+
+        {!isEventActiveNow && eventTimeBeforeStart && (
+          <div className="h-40 flex justify-center gap-9">
+            {eventTimeBeforeStart.extraDays && (
               <InfoCircle
                 color={dayColor}
                 entityMaxValue={7}
-                entityValue={eventTimeBeforeStart.days}
+                entityValue={eventTimeBeforeStart.extraDays}
+                textHeader={
+                  eventTimeBeforeStart.isMoreThanTwoWeeksToNextEvent
+                    ? `${eventTimeBeforeStart.extraDays}+`
+                    : null
+                }
                 textFooter={fmtDuration(['days'])}
               />
-              <InfoCircle
-                color={hourColor}
-                entityMaxValue={24}
-                entityValue={eventTimeBeforeStart.hours}
-                textFooter={fmtDuration(['hours'])}
-              />
-              <InfoCircle
-                color={minuteColor}
-                entityMaxValue={60}
-                entityValue={eventTimeBeforeStart.minutes}
-                textFooter={fmtDuration(['minutes'])}
-              />
-              <InfoCircle
-                color={secondColor}
-                entityMaxValue={60}
-                entityValue={eventTimeBeforeStart.seconds}
-                textFooter={fmtDuration(['seconds'])}
-              />
-            </div>
-          )
+            )}
+            <InfoCircle
+              color={dayColor}
+              entityMaxValue={7}
+              entityValue={eventTimeBeforeStart.days}
+              textFooter={fmtDuration(['days'])}
+            />
+            <InfoCircle
+              color={hourColor}
+              entityMaxValue={24}
+              entityValue={eventTimeBeforeStart.hours}
+              textFooter={fmtDuration(['hours'])}
+            />
+            <InfoCircle
+              color={minuteColor}
+              entityMaxValue={60}
+              entityValue={eventTimeBeforeStart.minutes}
+              textFooter={fmtDuration(['minutes'])}
+            />
+            <InfoCircle
+              color={secondColor}
+              entityMaxValue={60}
+              entityValue={eventTimeBeforeStart.seconds}
+              textFooter={fmtDuration(['seconds'])}
+            />
+          </div>
         )}
       </div>
 
