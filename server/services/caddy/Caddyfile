@@ -1,5 +1,5 @@
 # localhost {
-rainoffire.ru {
+tiny-tiger.rainoffire.ru {
   @publicAssets {
     path *.woff *.woff2 *.ttf *.jpg *.jpeg *.png *.gif *.ico *.webp *.svg
   }

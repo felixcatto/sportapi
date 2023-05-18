@@ -9,8 +9,8 @@ services:
     depends_on:
       - app
     ports:
-      - 3999:443
-      - 3999:443/udp
+      - 4000:443
+      - 4000:443/udp
     volumes:
       - caddy_data:/data
       - $PWD/server/services/caddy/Caddyfile:/etc/caddy/Caddyfile
